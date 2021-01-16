@@ -1,58 +1,41 @@
 # LibreNMS Install script
 # NOTE: Script wil update and upgrade currently installed packages.
 #!/bin/bash
-echo "This will install LibreNMS. Developed on Ubuntu 18.04 lts"
+echo "This will install LibreNMS. Developed on Ubuntu 20.04 LTS"
 echo "###########################################################"
 echo "Updating the repo cache and installing needed repos"
 echo "###########################################################"
-# Set the system timezone
-echo "Have you set the system time zone?: [yes/no]"
-read ANS
-if [ "$ANS" = "N" ] || [ "$ANS" = "No" ] || [ "$ASN" = "NO'" ] || [ "$ANS" = "no" ] || [ "$ANS" = "n" ]; then
-  echo "We will list the timezones"
-  echo "Use q to quite the list"
-  echo "-----------------------------"
-  sleep 5
-  echo " "
-  timedatectl list-timezones
-  echo "Enter system time zone:"
-  read TZ
-  timedatectl set-timezone $TZ
-fi
-apt update
 # Installing Required Packages
 apt install software-properties-common
 add-apt-repository universe
+apt update
 echo "Upgrading installed packages in the system"
 echo "###########################################################"
 apt upgrade -y
-echo "Installing dependancies"
+echo "Installing LibreNMS dependancies"
 echo "###########################################################"
-apt install -y curl composer fping git graphviz imagemagick mariadb-client \
-mariadb-server mtr-tiny nginx-full nmap php7.2-cli php7.2-curl php7.2-fpm \
-php7.2-gd php7.2-json php7.2-mbstring php7.2-mysql php7.2-snmp php7.2-xml \
-php7.2-zip python-memcache python-mysqldb rrdtool snmp snmpd whois unzip
+apt install -y acl curl composer fping git graphviz imagemagick mariadb-client \
+mariadb-server mtr-tiny nginx-full nmap php7.4-cli php7.4-curl php7.4-fpm \
+php7.4-gd php7.4-json php7.4-mbstring php7.4-mysql php7.4-snmp php7.4-xml \
+php7.4-zip rrdtool snmp snmpd whois unzip python3-pymysql python3-dotenv \
+python3-redis python3-setuptools
+# Add librenms user
+echo "Creating LibreNMS user account, set home directory - don't create it."
+echo "###########################################################"
+# add user link home directory, do not create home directory, system user
+useradd librenms -d /opt/librenms -M -r -s "$(which bash)"
 # Download LibreNMS
 echo "Downloading libreNMS to /opt"
 echo "###########################################################"
 cd /opt
 git clone https://github.com/librenms/librenms.git
-# Add librenms user
-echo "Creating libreNMS user account, set the home directory, don't create it."
-echo "###########################################################"
-# add user link home directory, do not create home directory, system user
-useradd librenms -d /opt/librenms -M -r
-# Add librenms user to www-data group
-echo "Adding libreNMS user to the www-data group"
-echo "###########################################################"
-usermod -a -G librenms www-data
-# Set permissions and access controls
+# Set permissions
 echo "Setting permissions and file access controls"
 echo "###########################################################"
 # set owner:group recursively on directory
 chown -R librenms:librenms /opt/librenms
-# mod permission on directory O=All,G=All, Oth=none
-chmod 770 /opt/librenms
+# mod permission on directory O=All,G=All, Oth=view
+chmod 771 /opt/librenms
 # mod default ACL
 setfacl -d -m g::rwx /opt/librenms/rrd /opt/librenms/logs /opt/librenms/bootstrap/cache/ /opt/librenms/storage/
 # mod ACL recursively
@@ -62,12 +45,45 @@ echo "running PHP installer script as librenms user"
 echo "###########################################################"
 # run php dependencies installer
 su librenms bash -c '/opt/librenms/scripts/composer_wrapper.php install --no-dev'
-# Configure MySQL (mariadb)
-echo "Configuring MySQL (mariadb)"
+# Set system timezone
+echo "Setup of system and PHP timezone"
 echo "###########################################################"
-systemctl restart mysql
+# Asking for timezome of choice
+read -p "We have to set the system time zone. Please [Enter] to continue..."
+echo "We will list available time zones"
+echo "Use q to quite the list"
+echo "-----------------------------"
+sleep 5
+echo " "
+timedatectl list-timezones
+echo "Enter system time zone of choice:"
+read TZ
+timedatectl set-timezone $TZ
+# Set timezone
+#### Change time zone to America/Denver in the following:
+# /etc/php/7.4/fpm/php.ini
+# /etc/php/7.4/cli/php.ini
+echo "setting PHP time zone"
+echo "timezone is set to America/Denver in /etc/php/7.4/fpm/php.ini and /etc/php/7.4/cli/php.ini change as needed."
+echo "Changing to $TZ"
+echo "################################################################################"
+sed -i '/;date.timezone =/ a date.timezone = $TZ' /etc/php/7.4/fpm/php.ini
+sed -i '/;date.timezone =/ a date.timezone = $TZ' /etc/php/7.4/cli/php.ini
+echo "????????????????????????????????????????????????????????????????????????????????"
+read -p "Please review changes in another session then press [Enter] to continue..."
+# Configure MariaDB
+echo "Configuring MariaDB"
+echo "###########################################################"
+##### Within the [mysqld] section of the config file please add: ####
+## innodb_file_per_table=1
+## lower_case_table_names=0
+sed -i '/mysqld]/ a lower_case_table_names=0' /etc/mysql/mariadb.conf.d/50-server.cnf
+sed -i '/mysqld]/ a innodb_file_per_table=1' /etc/mysql/mariadb.conf.d/50-server.cnf
+##### Enable & restart M
+systemctl enable mariadb
+systemctl restart mariadb
 # Pass commands to mysql and create DB, user, and privlages
-echo "Please enter a password for the Database:"
+echo "Please enter password for LibreNMS database user on MariaDB:"
 read ANS
 echo "###########################################################"
 echo "######### MySQL DB:librenms Password:$ANS #################"
@@ -76,81 +92,70 @@ mysql -uroot -e "CREATE DATABASE librenms CHARACTER SET utf8 COLLATE utf8_unicod
 mysql -uroot -e "CREATE USER 'librenms'@'localhost' IDENTIFIED BY '$ANS';"
 mysql -uroot -e "GRANT ALL PRIVILEGES ON librenms.* TO 'librenms'@'localhost';"
 mysql -uroot -e "FLUSH PRIVILEGES;"
-##### Within the [mysqld] section of the config file please add: ####
-## innodb_file_per_table=1
-## lower_case_table_names=0
-sed -i '/mysqld]/ a lower_case_table_names=0' /etc/mysql/mariadb.conf.d/50-server.cnf
-sed -i '/mysqld]/ a innodb_file_per_table=1' /etc/mysql/mariadb.conf.d/50-server.cnf
-##### Restart mysql
-systemctl restart mysql
-# Configure and Start PHP-FPM
-#### Change time zone to America/Denver in the following:
-# /etc/php/7.2/fpm/php.ini
-# /etc/php/7.2/cli/php.ini
-echo "timezone is set to America/Denver in /etc/php/7.2/fpm/php.ini and /etc/php/7.2/cli/php.ini change as needed."
-echo "Changing to $TZ"
-echo "################################################################################"
-sed -i '/;date.timezone =/ a date.timezone = $TZ' /etc/php/7.2/fpm/php.ini
-sed -i '/;date.timezone =/ a date.timezone = $TZ' /etc/php/7.2/cli/php.ini
-echo "????????????????????????????????????????????????????????????????????????????????"
-read -p "Please review changes in another session then press [Enter] to continue..."
-### restart PHP-fpm
-systemctl restart php7.2-fpm
-####  Config NGINX
-### Create .conf file
-echo "################################################################################"
+#### Configure PHP-FPM
+echo "Setup PHP-FPM (FastCGI Process Manager)"
+echo "###########################################################"
+cp /etc/php/7.4/fpm/pool.d/www.conf /etc/php/7.4/fpm/pool.d/librenms.conf
+sed -i 's/^\[www\]/\[librenms\]/' /etc/php/7.4/fpm/pool.d/librenms.conf
+sed -i 's/^user = www-data/user = librenms/' /etc/php/7.4/fpm/pool.d/librenms.conf
+sed -i 's/^group = www-data/group = librenms/' /etc/php/7.4/fpm/pool.d/librenms.conf
+#### Configure Web Server
+echo "Configuring Web Server"
+echo "###########################################################"
+### Create NGINX .conf file
 echo "We need to change the sever name to the current IP unless the name is resolvable /etc/nginx/conf.d/librenms.conf"
 echo "################################################################################"
-echo "Enter Hostname [x.x.x.x or serv.examp.com]: "
+echo "Enter nginx server_name [x.x.x.x or serv.examp.com]: "
 read HOSTNAME
-echo "server {"> /etc/nginx/conf.d/librenms.conf
-echo " listen      80;" >>/etc/nginx/conf.d/librenms.conf
+echo 'server {'> /etc/nginx/conf.d/librenms.conf
+echo ' listen      80;' >>/etc/nginx/conf.d/librenms.conf
 echo " server_name $HOSTNAME;" >>/etc/nginx/conf.d/librenms.conf
 echo ' root        /opt/librenms/html;' >>/etc/nginx/conf.d/librenms.conf
-echo " index       index.php;" >>/etc/nginx/conf.d/librenms.conf
-echo " " >>/etc/nginx/conf.d/librenms.conf
-echo " charset utf-8;" >>/etc/nginx/conf.d/librenms.conf
-echo " gzip on;" >>/etc/nginx/conf.d/librenms.conf
-echo " gzip_types text/css application/javascript text/javascript application/x-javascript image/svg+xml \
-text/plain text/xsd text/xsl text/xml image/x-icon;" >>/etc/nginx/conf.d/librenms.conf
+echo ' index       index.php;' >>/etc/nginx/conf.d/librenms.conf
+echo ' ' >>/etc/nginx/conf.d/librenms.conf
+echo ' charset utf-8;' >>/etc/nginx/conf.d/librenms.conf
+echo ' gzip on;' >>/etc/nginx/conf.d/librenms.conf
+echo ' gzip_types text/css application/javascript text/javascript application/x-javascript image/svg+xml \
+text/plain text/xsd text/xsl text/xml image/x-icon;' >>/etc/nginx/conf.d/librenms.conf
 echo ' location / {' >>/etc/nginx/conf.d/librenms.conf
 echo '  try_files $uri $uri/ /index.php?$query_string;' >>/etc/nginx/conf.d/librenms.conf
-echo " }" >>/etc/nginx/conf.d/librenms.conf
-echo ' location /api/v0 {' >>/etc/nginx/conf.d/librenms.conf
-echo '  try_files $uri $uri/ /api_v0.php?$query_string;' >>/etc/nginx/conf.d/librenms.conf
-echo " }" >>/etc/nginx/conf.d/librenms.conf
-echo ' location ~ \.php {' >>/etc/nginx/conf.d/librenms.conf
-echo "  include fastcgi.conf;" >>/etc/nginx/conf.d/librenms.conf
+echo ' }' >>/etc/nginx/conf.d/librenms.conf
+echo ' location ~ [^/]\.php(/|$) {' >>/etc/nginx/conf.d/librenms.conf
+echo '  fastcgi_pass unix:/run/php-fpm-librenms.sock;' >>/etc/nginx/conf.d/librenms.conf
 echo '  fastcgi_split_path_info ^(.+\.php)(/.+)$;' >>/etc/nginx/conf.d/librenms.conf
-echo '  fastcgi_pass unix:/var/run/php/php7.2-fpm.sock;' >>/etc/nginx/conf.d/librenms.conf
-echo " }" >>/etc/nginx/conf.d/librenms.conf
-echo ' location ~ /\.ht {' >>/etc/nginx/conf.d/librenms.conf
-echo "  deny all;" >>/etc/nginx/conf.d/librenms.conf
-echo " }" >>/etc/nginx/conf.d/librenms.conf
-echo "}" >>/etc/nginx/conf.d/librenms.conf
+echo '  include fastcgi.conf;' >>/etc/nginx/conf.d/librenms.conf
+echo ' }' >>/etc/nginx/conf.d/librenms.conf
+echo ' location ~ /\.(?!well-known).* {' >>/etc/nginx/conf.d/librenms.conf
+echo '  deny all;' >>/etc/nginx/conf.d/librenms.conf
+echo ' }' >>/etc/nginx/conf.d/librenms.conf
+echo '}' >>/etc/nginx/conf.d/librenms.conf
 ##### remove the default site link
 rm /etc/nginx/sites-enabled/default
 systemctl restart nginx
+systemctl restart php7.4-fpm
+#### Enable lnms command completion
+echo "Enable lnms command completion"
+echo "###########################################################"
+ln -s /opt/librenms/lnms /usr/local/bin/lnms
+cp /opt/librenms/misc/lnms-completion.bash /etc/bash_completion.d/
 ### Configure snmpd
 cp /opt/librenms/snmpd.conf.example /etc/snmp/snmpd.conf
 ### Edit the text which says RANDOMSTRINGGOESHERE and set your own community string.
-echo "We need to change community string"
-echo "Enter community string for this server [E.G.: public]: "
+echo "We need to set your default SNMP community string"
+echo "Enter community string [e.g.: public ]: "
 read ANS
 sed -i 's/RANDOMSTRINGGOESHERE/$ANS/g' /etc/snmp/snmpd.conf
 ######## get standard MIBs
 curl -o /usr/bin/distro https://raw.githubusercontent.com/librenms/librenms-agent/master/snmp/distro
 chmod +x /usr/bin/distro
+systemctl enable snmpd
 systemctl restart snmpd
 ##### Setup Cron job
 cp /opt/librenms/librenms.nonroot.cron /etc/cron.d/librenms
 ##### Setup logrotate config
 cp /opt/librenms/misc/librenms.logrotate /etc/logrotate.d/librenms
 #### Set permissions and file access control
-chown -R librenms:librenms /opt/librenms
-setfacl -d -m g::rwx /opt/librenms/rrd /opt/librenms/logs /opt/librenms/bootstrap/cache/ /opt/librenms/storage/
-setfacl -R -m g::rwx /opt/librenms/rrd /opt/librenms/logs /opt/librenms/bootstrap/cache/ /opt/librenms/storage/
-chmod -R ug=rwX /opt/librenms/rrd /opt/librenms/logs /opt/librenms/bootstrap/cache/ /opt/librenms/storage/
+chown librenms:librenms /opt/librenms/config.php
 echo "Select yes to the following or you will get an error during validation"
 echo "------------------------------------------------------------------------"
 sudo /opt/librenms/scripts/github-remove -d
