@@ -1,6 +1,12 @@
 # LibreNMS Install script
 # NOTE: Script wil update and upgrade currently installed packages.
 #!/bin/bash
+##### Check if sudo
+if [ "$EUID" -ne 0 ]
+  then echo "Please run as root"
+  exit
+fi
+##### Start script
 echo "This will install LibreNMS. Developed on Ubuntu 20.04 LTS"
 echo "###########################################################"
 echo "Updating the repo cache and installing needed repos"
@@ -67,8 +73,8 @@ echo "setting PHP time zone"
 echo "timezone is set to America/Denver in /etc/php/7.4/fpm/php.ini and /etc/php/7.4/cli/php.ini change as needed."
 echo "Changing to $TZ"
 echo "################################################################################"
-sed -i '/;date.timezone =/ a date.timezone = $TZ' /etc/php/7.4/fpm/php.ini
-sed -i '/;date.timezone =/ a date.timezone = $TZ' /etc/php/7.4/cli/php.ini
+sed -i "/;date.timezone =/ a date.timezone = $TZ" /etc/php/7.4/fpm/php.ini
+sed -i "/;date.timezone =/ a date.timezone = $TZ" /etc/php/7.4/cli/php.ini
 echo "????????????????????????????????????????????????????????????????????????????????"
 read -p "Please review changes in another session then press [Enter] to continue..."
 # Configure MariaDB
@@ -99,6 +105,7 @@ cp /etc/php/7.4/fpm/pool.d/www.conf /etc/php/7.4/fpm/pool.d/librenms.conf
 sed -i 's/^\[www\]/\[librenms\]/' /etc/php/7.4/fpm/pool.d/librenms.conf
 sed -i 's/^user = www-data/user = librenms/' /etc/php/7.4/fpm/pool.d/librenms.conf
 sed -i 's/^group = www-data/group = librenms/' /etc/php/7.4/fpm/pool.d/librenms.conf
+sed -i 's/^listen =.*/listen = \/run\/php-fpm-librenms.sock/' /etc/php/7.4/fpm/pool.d/librenms.conf
 #### Configure Web Server
 echo "Configuring Web Server"
 echo "###########################################################"
@@ -159,6 +166,10 @@ chown librenms:librenms /opt/librenms/config.php
 echo "Select yes to the following or you will get an error during validation"
 echo "------------------------------------------------------------------------"
 sudo /opt/librenms/scripts/github-remove -d
+###### Common fixes
+sudo chown -R librenms:librenms /opt/librenms
+sudo setfacl -d -m g::rwx /opt/librenms/rrd /opt/librenms/logs /opt/librenms/bootstrap/cache/ /opt/librenms/storage/
+sudo chmod -R ug=rwX /opt/librenms/rrd /opt/librenms/logs /opt/librenms/bootstrap/cache/ /opt/librenms/storage/
 ######
 echo "###############################################################################################"
 echo "Naviagte to http://$HOSTNAME/install.php in you web browser to finish the installation."
