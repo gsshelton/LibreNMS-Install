@@ -164,7 +164,7 @@ cp /opt/librenms/snmpd.conf.example /etc/snmp/snmpd.conf
 echo "We need to set your default SNMP community string"
 echo "Enter community string [e.g.: public ]: "
 read ANS
-sed -i 's/RANDOMSTRINGGOESHERE/$ANS/g' /etc/snmp/snmpd.conf
+sed -i "s/RANDOMSTRINGGOESHERE/$ANS/g" /etc/snmp/snmpd.conf
 
 # get standard MIBs
 curl -o /usr/bin/distro https://raw.githubusercontent.com/librenms/librenms-agent/master/snmp/distro
