@@ -195,7 +195,8 @@ chown librenms:librenms /opt/librenms/config.php
 sudo chown -R librenms:librenms /opt/librenms
 sudo setfacl -d -m g::rwx /opt/librenms/rrd /opt/librenms/logs /opt/librenms/bootstrap/cache/ /opt/librenms/storage/
 sudo chmod -R ug=rwX /opt/librenms/rrd /opt/librenms/logs /opt/librenms/bootstrap/cache/ /opt/librenms/storage/
-#####
+
+##### End of installation, continue in web browser
 echo "###############################################################################################"
 echo "Naviagte to http://$HOSTNAME/install.php in you web browser to finish the installation."
 echo "###############################################################################################"
