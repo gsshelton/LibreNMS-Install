@@ -4,7 +4,7 @@ This script is intended to automate the LibreNMS installation process according 
 ### How do I use it? 
 On your designated server simply run the following commands: 
 ```
-wget https://raw.githubusercontent.com/rawIce/LibreNMS-Install/master/install.sh install.sh
+wget https://raw.githubusercontent.com/rawIce/LibreNMS-Install/master/install.sh
 chmod +x install.sh
 sudo ./install.sh
 ```
