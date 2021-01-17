@@ -185,17 +185,16 @@ cp /opt/librenms/misc/librenms.logrotate /etc/logrotate.d/librenms
 #### Common fixes
 echo "Perform common fixes in order to help pass LibreNMS validation"
 echo "###########################################################"
-echo "Select yes to the following or you might get a warning during validation"
-echo "------------------------------------------------------------------------"
-# Remove github leftovers
-su librenms bash -c '/opt/librenms/scripts/github-remove -d'
 # create empty custom config.php in case the user needs it
 touch /opt/librenms/config.php
-chown librenms:librenms /opt/librenms/config.php
 # set default LibreNMS permissions which cause most errors
 sudo chown -R librenms:librenms /opt/librenms
 sudo setfacl -d -m g::rwx /opt/librenms/rrd /opt/librenms/logs /opt/librenms/bootstrap/cache/ /opt/librenms/storage/
 sudo chmod -R ug=rwX /opt/librenms/rrd /opt/librenms/logs /opt/librenms/bootstrap/cache/ /opt/librenms/storage/
+echo "Select yes to the following or you might get a warning during validation"
+echo "------------------------------------------------------------------------"
+# Remove github leftovers
+sudo su librenms bash -c '/opt/librenms/scripts/github-remove -d'
 
 ##### End of installation, continue in web browser
 echo "###############################################################################################"
