@@ -67,13 +67,13 @@ echo "Setup of system and PHP timezone"
 echo "###########################################################"
 # Asking for timezome of choice
 echo "We have to set the system time zone."
-echo "We will list available time zones"
-echo "Use q to quite the list"
+echo "You will get a list of all available time zones"
+echo "Use q to quit the list and enter your choice"
 read -p "Please [Enter] to continue..." ignore
 echo "-----------------------------"
-sleep 5
 echo " "
 timedatectl list-timezones
+echo " "
 echo "Enter system time zone of choice:"
 read TZ
 timedatectl set-timezone $TZ
@@ -96,7 +96,7 @@ sed -i '/mysqld]/ a innodb_file_per_table=1' /etc/mysql/mariadb.conf.d/50-server
 systemctl enable mariadb
 systemctl restart mariadb
 # Pass commands to mysql and create DB, user, and privlages
-echo "Please enter password for LibreNMS database user on MariaDB - you need it later during web installation:"
+echo "Please create a password for LibreNMS database user on MariaDB - you need it later during web installation:"
 read ANS
 echo "###########################################################"
 echo "######### MySQL DB:librenms Password:$ANS #################"
@@ -165,6 +165,7 @@ echo "We need to set your default SNMP community string"
 echo "Enter community string [e.g.: public ]: "
 read ANS
 sed -i 's/RANDOMSTRINGGOESHERE/$ANS/g' /etc/snmp/snmpd.conf
+
 # get standard MIBs
 curl -o /usr/bin/distro https://raw.githubusercontent.com/librenms/librenms-agent/master/snmp/distro
 chmod +x /usr/bin/distro
@@ -187,7 +188,7 @@ echo "###########################################################"
 echo "Select yes to the following or you might get a warning during validation"
 echo "------------------------------------------------------------------------"
 # Remove github leftovers
-sudo /opt/librenms/scripts/github-remove -d
+su librenms bash -c '/opt/librenms/scripts/github-remove -d'
 # create empty custom config.php in case the user needs it
 touch /opt/librenms/config.php
 chown librenms:librenms /opt/librenms/config.php
