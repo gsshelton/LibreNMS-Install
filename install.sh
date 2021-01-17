@@ -5,7 +5,7 @@
 #!/bin/bash
 
 ##### Check if sudo
-if [ "$EUID" -ne 0 ]
+if [[ "$EUID" -ne 0 ]]
   then echo "Please run as root"
   exit
 fi
@@ -185,8 +185,8 @@ cp /opt/librenms/misc/librenms.logrotate /etc/logrotate.d/librenms
 #### Common fixes
 echo "Perform common fixes in order to help pass LibreNMS validation"
 echo "###########################################################"
-# create empty custom config.php in case the user needs it
-touch /opt/librenms/config.php
+# create default custom config.php in case the user needs it
+cp /opt/librenms/config.php.default /opt/librenms/config.php
 # set default LibreNMS permissions which cause most errors
 sudo chown -R librenms:librenms /opt/librenms
 sudo setfacl -d -m g::rwx /opt/librenms/rrd /opt/librenms/logs /opt/librenms/bootstrap/cache/ /opt/librenms/storage/
