@@ -28,9 +28,9 @@ apt upgrade -y
 echo "Installing LibreNMS required packages"
 echo "###########################################################"
 apt install -y acl curl composer fping git graphviz imagemagick mariadb-client \
-mariadb-server mtr-tiny nginx-full nmap php7.4-cli php7.4-curl php7.4-fpm \
-php7.4-gd php7.4-json php7.4-mbstring php7.4-mysql php7.4-snmp php7.4-xml \
-php7.4-zip rrdtool snmp snmpd whois unzip python3-pymysql python3-dotenv \
+mariadb-server mtr-tiny nginx-full nmap php8.1-cli php8.1-curl php8.1-fpm \
+php8.1-gd php8.1-json php8.1-mbstring php8.1-mysql php8.1-snmp php8.1-xml \
+php8.1-zip rrdtool snmp snmpd whois unzip python3-pymysql python3-dotenv \
 python3-redis python3-setuptools
 
 ##### Add librenms user
@@ -81,8 +81,8 @@ timedatectl set-timezone $TZ
 echo "Setting PHP time zone"
 echo "Changing to $TZ"
 echo "################################################################################"
-sed -i "/;date.timezone =/ a date.timezone = $TZ" /etc/php/7.4/fpm/php.ini
-sed -i "/;date.timezone =/ a date.timezone = $TZ" /etc/php/7.4/cli/php.ini
+sed -i "/;date.timezone =/ a date.timezone = $TZ" /etc/php/8.1/fpm/php.ini
+sed -i "/;date.timezone =/ a date.timezone = $TZ" /etc/php/8.1/cli/php.ini
 
 ##### Configure MariaDB
 echo "Configuring MariaDB"
@@ -110,11 +110,11 @@ mysql -uroot -e "FLUSH PRIVILEGES;"
 ##### Configure PHP-FPM
 echo "Configure PHP-FPM (FastCGI Process Manager)"
 echo "###########################################################"
-cp /etc/php/7.4/fpm/pool.d/www.conf /etc/php/7.4/fpm/pool.d/librenms.conf
-sed -i 's/^\[www\]/\[librenms\]/' /etc/php/7.4/fpm/pool.d/librenms.conf
-sed -i 's/^user = www-data/user = librenms/' /etc/php/7.4/fpm/pool.d/librenms.conf
-sed -i 's/^group = www-data/group = librenms/' /etc/php/7.4/fpm/pool.d/librenms.conf
-sed -i 's/^listen =.*/listen = \/run\/php-fpm-librenms.sock/' /etc/php/7.4/fpm/pool.d/librenms.conf
+cp /etc/php/8.1/fpm/pool.d/www.conf /etc/php/8.1/fpm/pool.d/librenms.conf
+sed -i 's/^\[www\]/\[librenms\]/' /etc/php/8.1/fpm/pool.d/librenms.conf
+sed -i 's/^user = www-data/user = librenms/' /etc/php/8.1/fpm/pool.d/librenms.conf
+sed -i 's/^group = www-data/group = librenms/' /etc/php/8.1/fpm/pool.d/librenms.conf
+sed -i 's/^listen =.*/listen = \/run\/php-fpm-librenms.sock/' /etc/php/8.1/fpm/pool.d/librenms.conf
 
 ##### Configure web server (NGINX
 echo "Configure web server (NGINX)"
@@ -149,7 +149,7 @@ echo '}' >>/etc/nginx/conf.d/librenms.conf
 # remove the default site link
 rm /etc/nginx/sites-enabled/default
 systemctl restart nginx
-systemctl restart php7.4-fpm
+systemctl restart php8.1-fpm
 
 ##### Enable lnms command completion
 echo "Enable lnms command completion"
